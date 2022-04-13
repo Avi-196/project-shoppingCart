@@ -19,10 +19,16 @@ router.put("/user/:userId/profile",middleWare.auth,userController.updateUser)
 
 router.post("/products",productController.createproduct)
 
+router.get("/products",productController.getproductByQuery)
+
 
 router.get("/products/:productId",productController.getproductsById)
 
+router.put("/products/:productId",productController.updtaeproductById)
+
 
 router.delete("/products/:productId",productController.deleteproductById)
+
+
 
 module.exports=router

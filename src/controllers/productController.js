@@ -1,14 +1,20 @@
 const productModel=require("../models/productModel")
 
 const aws=require("../controllers/awsController")
-const { default: mongoose } = require("mongoose")
+
 
 
 const isValid=function(value){
     if(typeof value ==="undefined"||typeof value ==="null")return false
-    if(typeof value ==="string" && typeof value.trim().length===0)return false
+    if(typeof value ==="string" &&  value.trim().length===0)return false
     return true
 }
+const isValidNumber = function (value) {
+
+    if (typeof value === 'undefined' || value === null) return false
+    if (  isNaN(value)    && value.toString().trim().length !== 0) return false
+    return true;
+  }
 
 const isValidfiles = function (files) {
     if (files && files.length > 0)
@@ -23,7 +29,7 @@ const createproduct=async function(req,res){
        try {
            let data=req.body
            let files=req.files
-    const {title,description,price,currencyId,currencyFormat,style,availableSizes } =data 
+    let {title,description,price,currencyId,currencyFormat,style,availableSizes } =data 
 
     if(Object.keys(data).length==0){
         return res.status(400).send({status:false,msg:"your req is bad"})
@@ -64,13 +70,19 @@ const createproduct=async function(req,res){
      if(!isValidfiles(files)){
          return res.status(400).send({status:false,msg:"please provide the product image"})
      }
-    if(availableSizes){
+     if(availableSizes){
         
-            if (availableSizes.length === 0) {
-                return res.status(400).send({ status: false, msg: 'size is needed'})
-            }
-    }
+        if (availableSizes.length === 0) {
+            return res.status(400).send({ status: false, msg: 'size is needed'})
+        }
+         availableSizes = availableSizes.map(x => x.trim())
 
+        for (let i = 0; i < availableSizes.length; i++) {
+            if (!(["S", "XS", "M", "X", "L", "XXL", "XL"].includes(availableSizes[i]))) {
+                return res.status(400).send({ status: false, message: "AvailableSizes contains ['S','XS','M','X','L','XXL','XL'] only" })
+            }
+        }
+    }
     const dubTitle=await productModel.findOne({title:title})
     if(dubTitle){
         return res.status(400).send({status:false,msg:"title is already pressent"})
@@ -91,6 +103,66 @@ const createproduct=async function(req,res){
            return res.status(500).send({status:false,msg:error.message})
            
        }
+}
+
+const getproductByQuery = async function (req, res) {
+
+    try {
+
+        const requestQuery = req.query
+
+        const { size, name, priceGreaterThan, priceLessThan, priceSort } = requestQuery
+
+        const finalFilter = [{ isDeleted: false }]
+
+        if (isValid(name)) {
+            finalFilter.push({ title: { $regex: name, $options: "$i" } })
+        }
+        if (isValid(size)) {
+            if (!(["S", "XS", "M", "X", "L", "XXL", "XL"].includes(size))) {
+                return res.status(400).send({ status: false, message: "please enter valid size  " })
+            }
+            finalFilter.push({ availableSizes: size })
+        }
+
+        if (isValidNumber(priceGreaterThan)) {
+
+            finalFilter.push({ price: { $gt: priceGreaterThan } })
+        }
+        if (isValidNumber(priceLessThan)) {
+
+            finalFilter.push({ price: { $lt: priceLessThan } })
+        }
+
+     
+        if (isValidNumber(priceSort)) {
+
+            if (priceSort != 1 && priceSort != -1) {
+                return res.status(400).send({ status: false, message: "pricesort must to 1 or -1" })
+            }
+            const productpricessort = await productModel.find({ $and: finalFilter }).sort({ price: priceSort })
+
+            if (Array.isArray(productpricessort) && productpricessort.length === 0) {
+                return res.status(404).send({ status: false, message: "data not found" })
+            }
+
+            return res.status(200).send({ status: true, message: "products with sorted price", data:productpricessort })
+        }
+
+          
+        const fillteredProducts = await productModel.find({ $and: finalFilter })
+         //for checking array
+        if (Array.isArray(fillteredProducts) && fillteredProducts.length === 0) {
+            return res.status(404).send({ status: false, message: "data not found" })
+        }
+
+        return res.status(200).send({ status: true, message: "products without sorted price", data: fillteredProducts })
+
+
+    } catch (err) {
+        return res.status(500).send({ status: false, message: err.message })
+    }
+
 }
 
 
@@ -117,76 +189,92 @@ const getproductsById=async function(req,res){
 }
 
 
-// const updtaeproductById=async function(req,res){
-//     try {
-//           let data=req.body
-//           let files=req.files
-//         const productId = req.params.productId
+const updtaeproductById=async function(req,res){
+    try {
+          let data=req.body
+          let files=req.files
+        const productId = req.params.productId
         
-//         const checkProductId = await productModel.findOne({ _id: productId, isDeleted: false })
-//      if (!checkProductId) {
-//             return res.status(404).send({ status: false, msg: 'please provide valid product id ' })
-//         }
-//  const { title,description,price,currencyId,currencyFormat,availableSizes,isFreeShipping,style,installments}=data
+        const checkProductId = await productModel.findOne({ _id: productId, isDeleted: false })
+     if (!checkProductId) {
+            return res.status(404).send({ status: false, msg: 'please provide valid product id ' })
+        }
+ const { title,description,price,currencyId,currencyFormat,availableSizes,style,installments}=data
 
-//         const emptyobj = {}
-//         if(title){
-//         if (!isValid(title)) {
-//             return res.status(400).send({status:false,msg:"title is required"})
-//         }
-//         const dubTitle=await productModel.findOne({title:title})
-//         if(dubTitle){
-//             return res.status(400).send({status:false,msg:"title already exist"})
-//         }
-//         emptyobj.title=title
-//     }
+        const emptyobj = {}
+        
+        if (!isValid(title)) {
+            return res.status(400).send({status:false,msg:"title is required"})
+        }
+        if(title){
+        const dubTitle=await productModel.findOne({title:title})
+        if(dubTitle){
+            return res.status(400).send({status:false,msg:"title already exist"})
+        }
+        emptyobj.title=title
+    }
       
-//        if(description){
-//            if(!isValid(description)){
-//                return res.status(400).send({status:false,msg:"required descriptio"})
+       if(description){
+           if(!isValid(description)){
+               return res.status(400).send({status:false,msg:"required descriptio"})
 
-//            }
-//        }
+           }
+           emptyobj.description=description
+       }
+        if(price){
+        if (!isValid(price)) {
+            
+            return res.status(400).send({status:false,msg:"price is required"})
+        }
+        emptyobj.price=price
+    }
+          if(currencyId){
+        if (!isValid(currencyId)) {
+            return res.status(400).send({status:false,msg:"currencyId is required"})
+        }
+        emptyobj.currencyId=currencyId
+    }
+        
+       if(currencyFormat){
+        if (!isValid(currencyFormat)) {
+            return res.status(400).send({status:false,msg:"currencyformat is requird"})
+        }
 
-//         if (isValid(price)) {
-//             updateProductInfo.price = price
-//         }
+    }
+       if(style){
+        if (!isValid(style)) {
+            return res.status(400).send({status:false,msg:"style is required"})
+        }
+        emptyobj.style=style
 
-//         if (isValid(currencyId)) {
-//             updateProductInfo.currencyId = currencyId
-//         }
+    }
+        if (availableSizes) {
 
-//         if (isValid(isFreeShipping)) {
-//             updateProductInfo.isFreeShipping = isFreeShipping
-//         }
-
-//         if (isValid(currencyFormat)) {
-//             updateProductInfo.currencyFormat = currencyFormat
-//         }
-
-//         if (isValid(style)) {
-//             updateProductInfo.style = style
-//         }
-//         if (availableSizes) {
-
-//             if (availableSizes.length === 0) {
-//                 return res.status(400).send({ status: false, msg: 'please provide the product size' })
-//             }
+            if (availableSizes.length === 0) {
+                return res.status(400).send({ status: false, msg: 'please provide the product size' })
+            }
           
-//             updateProductInfo.$addToSet =availableSizes
-//         }
-//         if (isValid(installments)) {
-//             updateProductInfo.installments = installments
-//         }
-//         const updatedProduct = await productModel.findOneAndUpdate({ _id: productId }, updateProductInfo, { new: true })
+            emptyobj.availableSizes =availableSizes
+        }
+        if (isValid(installments)) {
+            emptyobj.installments = installments
+        }
+        
+        if (isValidfiles(files)) {
+            productImage = await aws.uploadFile(files[0]);
+            emptyobj.productImage = productImage
 
-//         return res.status(200).send({ status: true, message: 'Success', data: updatedProduct });
+        }
 
-//     } catch (error) {
-//         return res.status(500).send({ status: false, message: error.message });
-//     }
+        const product = await productModel.findOneAndUpdate({ _id: productId },emptyobj, { new: true })
 
-// }
+        return res.status(200).send({ status: true, message: ' updated Successfully', data: product });
+
+    } catch (error) {
+        return res.status(500).send({ status: false, message: error.message });
+    }
+
+}
  
 
 
@@ -217,7 +305,9 @@ const deleteproductById=async function(req,res){
 
 
 module.exports.createproduct=createproduct
+module.exports.getproductByQuery=getproductByQuery
 module.exports.getproductsById=getproductsById
 module.exports.deleteproductById=deleteproductById
+module.exports.updtaeproductById=updtaeproductById
 
 

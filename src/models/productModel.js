@@ -58,10 +58,12 @@ const productSchema=new mongoose.Schema({
     }],
     installments: {
         type: Number,
+        default:"0",
         trim: true
     },
     deletedAt: {
-        type: Date
+        type: Date,
+        default:null
     },
     isDeleted: {
         type: Boolean,

@@ -7,7 +7,7 @@ const jwt=require("jsonwebtoken")
 
 
 const isValid=function (value){
-    if(typeof value ==="undefined"||typeof value ==="null") return false
+    if(typeof value ==="undefined"||typeof value ===null) return false
     if(typeof value ==='string' &&  value.trim().length ===0) return false
     return true
 }
@@ -163,7 +163,7 @@ const loginUser=async function(req,res){
             let token=jwt.sign({userId:userId,
                 
 
-            },"project5-group31-shoppingcart",{expiresIn:"60m"})
+            },"project5-group31-shoppingcart",{expiresIn:"2d"})
             res.header("x-api-key",token)
             res.status(201).send({status:true,  msg:"user login sucessfull",data:{userId,token}})
 

@@ -1,11 +1,12 @@
 const productModel=require("../models/productModel")
 
 const aws=require("../controllers/awsController")
+const mongoose=require("mongoose")
 
 
 
 const isValid=function(value){
-    if(typeof value ==="undefined"||typeof value ==="null")return false
+    if(typeof value ==="undefined"||typeof value ===null)return false
     if(typeof value ==="string" &&  value.trim().length===0)return false
     return true
 }
@@ -58,7 +59,7 @@ const createproduct=async function(req,res){
         return
     }
     if (currencyFormat != "₹") {
-        res.status(400).send({ status: false, Message: "cureenccy format shouls be rupee" })
+        res.status(400).send({ status: false, Message: "cureenccy format should be rupee" })
         return
     }
 
@@ -156,7 +157,7 @@ const getproductByQuery = async function (req, res) {
             return res.status(404).send({ status: false, message: "data not found" })
         }
 
-        return res.status(200).send({ status: true, message: "products without sorted price", data: fillteredProducts })
+        return res.status(200).send({ status: true, message: "products without sorted", data: fillteredProducts })
 
 
     } catch (err) {
@@ -172,7 +173,7 @@ const getproductsById=async function(req,res){
     try {
         let productId=req.params.productId
         if(!isValidObjectId(productId)){
-            return res.status(400).send({status:false,msg:"product it is not valid"})
+            return res.status(400).send({status:false,msg:"product id is not valid"})
         }
         const getproducts=await productModel.findById({_id:productId})
         if(!getproducts){
@@ -294,7 +295,7 @@ const deleteproductById=async function(req,res){
         }
 
         const productdelete=await productModel.findByIdAndUpdate({_id:productId},{$set:{isDeleted:true,deletedAt:new Date()}},{new:true})
-        return res.status(400).send({status:true,msg:"deleted sucessfully",data:productdelete})
+        return res.status(200).send({status:true,msg:"deleted sucessfully",data:productdelete})
         
     } catch (error) {
         return res.status(500).send({status:false,msg:error.message})

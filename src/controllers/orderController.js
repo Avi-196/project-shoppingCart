@@ -3,7 +3,7 @@ const mongoose=require("mongoose")
 
 const isValid=function(value){
     if(typeof value==="undefined"||typeof value===null )return false
-    if(typeof value==="syring"&& value.trim().length===0)return false
+    if(typeof value==="string"&& value.trim().length===0)return false
     return true
 }
 
@@ -17,18 +17,19 @@ const isValidObjectId=function(ObjectId){
         let requestBody = req.body;
         const userId = req.params.userId
 
-        let { items,totalItems, totalPrice} = requestBody
+        let { items,totalItems, totalPrice,totalQuantity} = requestBody
        
         if(Object.keys(requestBody).length==0){
             return res.status(400).send({status:false,msg:"bad req"})
         }
+    
         if (!isValidObjectId(userId)) {
             return res.status(400).send({ status: false, message:"userid is not valid" })
         }
         requestBody.userId=userId
            
         if (req.userId!==userId) {
-            return res.status(400).send({ status: false, msg: "you are not authorized" })
+            return res.status(401).send({ status: false, msg: "you are not authorized" })
         }
 
         if (items.length ==0) {
@@ -43,15 +44,12 @@ const isValidObjectId=function(ObjectId){
         if (!isValid(totalItems)) {
             return res.status(400).send({ status: false, message: "totalItems is required"})
         }
-         
-              let totalQuantity=0
-        for (let i = 0; i < items.length; i++) {
-            totalQuantity = totalQuantity + items[i].quantity
+        if(!isValid(totalQuantity)){
+            return res.status(400).send({status:false,msg:"totalQunatity is required"})
         }
-        requestBody.totalQuantity = totalQuantity
-               
+         
         const createProduct = await orderModel.create(requestBody);
-        res.status(200).send({ status: true, msg: 'sucesfully created order', data: createProduct })
+        res.status(201).send({ status: true, msg: 'sucesfully created order', data: createProduct })
 
     } catch (error) {
         res.status(500).send({ status: false, Message: error.message })
@@ -88,7 +86,10 @@ const updateOrder = async function (req, res) {
         }
         const Order = await orderModel.findOne({ _id: orderId, isDeleted: false })
         if (!Order) {
-            return res.status(400).send({ status:false, message: 'order id not correct ' })
+            return res.status(400).send({ status:false, message: "orderid is not correct" })
+        } 
+        if (!(Order.userId == userId)) {
+            return res.status(400).send({ status: false, message:"order does not blongs to upperuserId" })
         } 
      
         if(isValid(status)){

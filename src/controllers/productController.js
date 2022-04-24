@@ -180,7 +180,9 @@ const getproductsById=async function(req,res){
             return res.status(404).send({status:false,msg:"this product are not avilable"})
         }
         if(getproducts.isDeleted==false){
-            return res.status(200).send({status:false,msg:"got data",data:getproducts})
+            return res.status(200).send({status:true,msg:"got data",data:getproducts})
+        }else{
+            return res.status(404).send({status:false,msg:"product not found or maybe deleted"})
         }
         
     } catch (error) {
@@ -198,16 +200,13 @@ const updtaeproductById=async function(req,res){
         
         const checkProductId = await productModel.findOne({ _id: productId, isDeleted: false })
      if (!checkProductId) {
-            return res.status(404).send({ status: false, msg: 'please provide valid product id ' })
+            return res.status(404).send({ status: false, msg: 'this product is not avilable or deleted' })
         }
- const { title,description,price,currencyId,currencyFormat,availableSizes,style,installments}=data
+ const { title,description,price,currencyId,currencyFormat,availableSizes,style,installments,isFreeShipping}=data
 
         const emptyobj = {}
-        
-        if (!isValid(title)) {
-            return res.status(400).send({status:false,msg:"title is required"})
-        }
-        if(title){
+    
+        if(isValid(title)){
         const dubTitle=await productModel.findOne({title:title})
         if(dubTitle){
             return res.status(400).send({status:false,msg:"title already exist"})
@@ -215,37 +214,29 @@ const updtaeproductById=async function(req,res){
         emptyobj.title=title
     }
       
-       if(description){
-           if(!isValid(description)){
-               return res.status(400).send({status:false,msg:"required descriptio"})
-
-           }
+       if(isValid(description)){
+         
            emptyobj.description=description
        }
-        if(price){
-        if (!isValid(price)) {
+        if(isValid(price)){
+        
             
-            return res.status(400).send({status:false,msg:"price is required"})
-        }
+            if (price<=0) {
+                return res.status(400).send({ status: false, message:"price should be more than 0" })
+            }
         emptyobj.price=price
     }
-          if(currencyId){
-        if (!isValid(currencyId)) {
-            return res.status(400).send({status:false,msg:"currencyId is required"})
-        }
+          if(isValid (currencyId)){
+       
         emptyobj.currencyId=currencyId
     }
         
-       if(currencyFormat){
-        if (!isValid(currencyFormat)) {
-            return res.status(400).send({status:false,msg:"currencyformat is requird"})
-        }
+       if(isValid(currencyFormat)){
+           emptyobj.currencyFormat=currencyFormat
 
     }
-       if(style){
-        if (!isValid(style)) {
-            return res.status(400).send({status:false,msg:"style is required"})
-        }
+       if(isValid(style)){
+      
         emptyobj.style=style
 
     }
@@ -260,6 +251,9 @@ const updtaeproductById=async function(req,res){
         if (isValid(installments)) {
             emptyobj.installments = installments
         }
+        if(isValid(isFreeShipping)){
+            emptyobj.isFreeShipping=isFreeShipping
+        }
         
         if (isValidfiles(files)) {
             productImage = await aws.uploadFile(files[0]);
@@ -268,7 +262,7 @@ const updtaeproductById=async function(req,res){
         }
 
         const product = await productModel.findOneAndUpdate({ _id: productId },emptyobj, { new: true })
-
+   
         return res.status(200).send({ status: true, message: ' updated Successfully', data: product });
 
     } catch (error) {

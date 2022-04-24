@@ -201,179 +201,94 @@ const getuserById = async (req, res) => {
 
 const updateUser = async function (req, res) {
 
-    try {
-            
+    try {         
         let data=req.body
         let files = req.files;
-
         const userId = req.params.userId
-
-        
-
         if (req.userId!=userId) {
             return res.status(401).send({ status: false, msg: "you are not authorized" })
         }
-
-
         const { fname, lname, email, phone, password, address } = data
         const emptyobj = {}
-
-        if (fname) {
-            if (!isValid(fname)) {
-                res.status(400).send({ status: false, Message: "please provide fname" })
-                return
-            }
+        if (isValid(fname)) {         
             emptyobj.fname = fname
         }
-
-        if (lname) {
-            if (!isValid(lname)) {
-                res.status(400).send({ status: false, Message: "please give lname" })
-                return
-            }
+        if (isValid(lname)) {     
             emptyobj.lname = lname
-        }
-        
-        if(!isValid(email)){
-            return res.status(400).send({status:false,msg:"email is required"})
-        }
-         
+        }       
+        if(isValid(email)){      
         if (email) {
             if (!(/^\w+([\.-]?\w+)@\w+([\.-]?\w+)(\.\w{2,3})+$/.test(email))) {
                 return res.status(400).send({ status: false, msg: 'enter valid email' })
             }
-
-          
-
             const dubEmail = await userModel.findOne({ email: email });
-
             if (dubEmail) {
                 res.status(400).send({ status: false, message:"email is already exist"})
                 return
             }
             emptyobj.email = email
         }
-        if(!isValid(phone)){
-            return res.status(400).send({status:false,msg:"phone is required"})
-        }
+    }
+        if(isValid(phone)){
         if (phone) {
             if (!(/^\d{10}$/.test(phone))) {
-                res.status(400).send({ status: false, message: "phone no should be in 10digits"})
+                res.status(400).send({ status: false, message:"phone no should be in 10digits"})
                 return
             }
             const dubPhone = await userModel.findOne({ phone: phone });
-
             if (dubPhone) {
-                res.status(400).send({ status: false, message:   "phone is already registered" })
+                res.status(400).send({ status: false, message:"phone is already registered" })
                 return
             }
             emptyobj.phone = phone
         }
-
-        if (password) {
-            if(!isValid(password)){
-                return res.status(400).send({status:false,msg:"password is rquired"})
-            }
+        }
+        if (isValid(password)) {
             if (password.length > 15) {
-                return  res.status(400).send({ status: false, msg: "Password should be less than 15 characters"})
-                  
-              }
+                return  res.status(400).send({ status: false, msg: "Password should be less than 15 characters"})               
+             }
               if (password.length < 8) {
-                return  res.status(400).send({ status: false, msg: "Password should be more than 8 characters"})
-                  
+                return  res.status(400).send({ status: false, msg: "Password should be more than 8 characters"})                
               }
-
             const encryptedPassword = await bcrypt.hash(password, saltRounds)
 
             emptyobj.password = encryptedPassword
-
         }
-        
-
         if (isValidfiles(files)) {
             profileImage = await aws.uploadFile(files[0]);
             emptyobj.profileImage = profileImage
-
         }
-
         if (address) {
-
             if (address.shipping) {
-
-                if (address.shipping.street) {
-
-                    if (!isValid(address.shipping.street)) {
-                        res.status(400).send({ status: false, Message: "Please provide street in shipping" })
-                        return
-                    }
+                if (isValid(address.shipping.street)) {
                     emptyobj["address.shipping.street"] = address.shipping.street
                 }
-
-                if (address.shipping.city) {
-                    if (!isValid(address.shipping.city)) {
-                        res.status(400).send({ status: false, Message: "Please provide city in shipping" })
-                        return
-                    }
+                if (isValid(address.shipping.city)) {
                     emptyobj["address.shipping.city"] = address.shipping.city
                 }
-
-                if (address.shipping.pincode) {
-                    if (!isValid(address.shipping.pincode)) {
-                        res.status(400).send({ status: false, Message: "Please provide in shipping" })
-                        return
-                    }
+                if (isValid(address.shipping.pincode)) {  
                     emptyobj["address.shipping.pincode"] = address.shipping.pincode
                 }
-
             }
-
             if (address.billing) {
-
-                if (address.billing.street) {
-
-                    if (!isValid(address.billing.street)) {
-                        res.status(400).send({ status: false, Message: "Please provide street in billing" })
-                        return
-                    }
+                if (isValid(address.billing.street)) {
                     emptyobj["address.billing.street"] = address.billing.street
                 }
-
-                if (address.billing.city) {
-                    if (!isValid(address.billing.city)) {
-                        res.status(400).send({ status: false, Message: "Please provide city  in billing" })
-                        return
-                    }
-
+                if (isValid(address.billing.city)) {
                     emptyobj["address.billing.city"] = address.billing.city
                 }
-
-                if (address.billing.pincode) {
-
-                    if (!isValid(address.billing.pincode)) {
-                        res.status(400).send({ status: false, Message: "Please provide pincode in billing address" })
-                        return
-                    }
-
+                if (isValid(address.billing.pincode)) {
                     emptyobj["address.billing.pincode"] = address.billing.pincode
                 }
-
             }
         }
-
         const userupdate = await userModel.findOneAndUpdate({ _id:userId }, emptyobj, { new: true })
-
         res.status(200).send({ status: true, message: "updated sucessfully", data: userupdate });
     }
     catch (error) {
         res.status(500).send({ status: false, Message: error.message })
     }
 }
-
-
-
-
-
-
 
 
 module.exports.createUser=createUser
